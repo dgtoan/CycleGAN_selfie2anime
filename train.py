@@ -1,42 +1,43 @@
+import os
 import torch
 from torch.utils.data import DataLoader
-import config as cfg
+from config import *
 from dataset import MyDataset
 from model import Generator, Discriminator
 from loss import Loss
-import os
 from tqdm import tqdm
+from utils import (
+    save_weights,
+)
 
 def main():
-    print("Device: ", cfg.DEVIVE)
+    os.makedirs(WEIGHTS_PATH, exist_ok=True)
+    print("Device: ", DEVICE)
 
-    trainDataset = MyDataset(cfg.TRAIN_PATH, cfg.TRAIN_TRANS)
-    valDataset = MyDataset(cfg.VAL_PATH, cfg.TEST_TRANS)
-    print("Train Images: ", trainDataset.__len__())
-    print("Validation Images: ", valDataset.__len__())
+    trainDataset = MyDataset(TRAIN_PATH, TRAIN_TRANS)
+    valDataset = MyDataset(VAL_PATH, TEST_TRANS)
+    trainLoader = DataLoader(trainDataset, BATCH_SIZE, shuffle=True, num_workers=N_WORKER)
+    valLoader = DataLoader(valDataset, BATCH_SIZE, num_workers=N_WORKER)
+    print("Train Images: ", len(trainLoader))
+    print("Validation Images: ", len(valLoader))
     print()
 
-    trainLoader = DataLoader(trainDataset, cfg.BATCH_SIZE, shuffle=True, num_workers=cfg.N_WORKER)
-    valLoader = DataLoader(valDataset, cfg.BATCH_SIZE, num_workers=cfg.N_WORKER)
-
-    loss = Loss(cfg.LAMBDA_)
-
-    netG_A2B = Generator().cuda()
-    netG_B2A = Generator().cuda()
-    netD_A = Discriminator().cuda()
-    netD_B = Discriminator().cuda()
+    netG_A2B = Generator().to(DEVICE)
+    netG_B2A = Generator().to(DEVICE)
+    netD_A = Discriminator().to(DEVICE)
+    netD_B = Discriminator().to(DEVICE)
 
     G_params = list(netG_A2B.parameters()) + list(netG_B2A.parameters())
-    optimizer_G = torch.optim.Adam(G_params, lr=cfg.LR, betas=(0.5, 0.999))
-    optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=cfg.LR, betas=(0.5, 0.999))
-    optimizer_D_B = torch.optim.Adam(netD_B.parameters(), lr=cfg.LR, betas=(0.5, 0.999))
+    optimizer_G = torch.optim.Adam(G_params, lr=LR, betas=(0.5, 0.999))
+    optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=LR, betas=(0.5, 0.999))
+    optimizer_D_B = torch.optim.Adam(netD_B.parameters(), lr=LR, betas=(0.5, 0.999))
 
+    loss = Loss(LAMBDA_)
     losses_train = []
     losses_val = []
-    gen_min_loss = 1.0
-    dis_min_loss = 1.0
+    min_loss = 1.0
 
-    for epoch in range(cfg.EPOCHS):
+    for epoch in range(EPOCHS):
         print('EPOCH', epoch)
         running_train_loss = [0.0, 0.0]
         running_val_loss = [0.0, 0.0]
@@ -50,13 +51,13 @@ def main():
 
         pbar = tqdm(
             trainLoader,
-            postfix = {'Dis_Loss': 0.0, 'Gen_Loss': 0.0},
-            ncols=80
+            postfix = {'G_Loss': 0.0, 'D_Loss': 0.0},
+            ncols=100
         )
         for input in pbar:
 
-            real_A = input['A'].to(cfg.DEVIVE)
-            real_B = input['B'].to(cfg.DEVIVE)
+            real_A = input['A'].to(DEVICE)
+            real_B = input['B'].to(DEVICE)
 
             # Generator
             optimizer_G.zero_grad()
@@ -105,21 +106,21 @@ def main():
             optimizer_D_B.step()
 
             # update progress bar
-            dis_tot_loss = (dis_A_loss+dis_B_loss) * 0.5
-            gen_tot_loss = gen_tot_loss / cfg.LAMBDA_ / 3.2
+            dis_tot_loss = (dis_A_loss+dis_B_loss) / 2
+            gen_tot_loss = gen_tot_loss / LAMBDA_ / 3.2
             pbar.set_postfix({
-                'Dis_Loss': round(dis_tot_loss.item(), 3),
-                'Gen_Loss': round(gen_tot_loss.item(), 3)
+                'G_Loss': round(gen_tot_loss.item(), 3),
+                'D_Loss': round(dis_tot_loss.item(), 3),
             })
 
             # Log training loss
             running_train_loss[0] += gen_tot_loss.item()*real_A.size(0)
             running_train_loss[1] += dis_tot_loss.item()*real_A.size(0)
 
-        losses_train.append(running_train_loss)
         running_train_loss[0] = round(running_train_loss[0]/len(trainLoader), 3)
         running_train_loss[1] = round(running_train_loss[1]/len(trainLoader), 3)
         print('Generator Loss: {}, Discriminator Loss: {}'.format(*running_train_loss))
+        losses_train.append(running_train_loss)
 
         # VALIDATING
         print('Validating:')
@@ -131,14 +132,14 @@ def main():
 
         pbar = tqdm(
             valLoader,
-            postfix = {'Dis_Loss': 0.0, 'Gen_Loss': 0.0},
-            ncols=80
+            postfix = {'G_Loss': 0.0, 'D_Loss': 0.0},
+            ncols=100
         )
 
         with torch.no_grad():
             for input in pbar:
-                real_A = input['A'].to(cfg.DEVIVE)
-                real_B = input['B'].to(cfg.DEVIVE)
+                real_A = input['A'].to(DEVICE)
+                real_B = input['B'].to(DEVICE)
 
                 # Generator loss
                 fake_A = netG_B2A(real_B)
@@ -170,36 +171,29 @@ def main():
                 dis_B_loss = loss.get_dis_loss(pred_fake_B, pred_real_B)
 
                 # Update progress bar
-                dis_tot_loss = (dis_A_loss+dis_B_loss) * 0.5
-                gen_tot_loss = gen_tot_loss / cfg.LAMBDA_ / 3.2
+                dis_tot_loss = (dis_A_loss+dis_B_loss) / 2
+                gen_tot_loss = gen_tot_loss / LAMBDA_ / 3.2
                 pbar.set_postfix({
-                    'Dis_Loss': round(dis_tot_loss.item(), 3),
-                    'Gen_Loss': round(gen_tot_loss.item(), 3)
+                    'G_Loss': round(gen_tot_loss.item(), 3),
+                    'D_Loss': round(dis_tot_loss.item(), 3),
                 })
 
                 # Log training loss
                 running_val_loss[0] += gen_tot_loss.item()*real_A.size(0)
                 running_val_loss[1] += dis_tot_loss.item()*real_A.size(0)
 
-            losses_val.append(running_val_loss)
-            running_val_loss[0] = round(running_val_loss[0]/len(trainLoader), 3)
-            running_val_loss[1] = round(running_val_loss[1]/len(trainLoader), 3)
+            running_val_loss[0] = round(running_val_loss[0]/len(valLoader), 3)
+            running_val_loss[1] = round(running_val_loss[1]/len(valLoader), 3)
             print('Generator Loss: {}, Discriminator Loss: {}'.format(*running_val_loss))
+            losses_val.append(running_val_loss)
 
         # Save model
-        torch.save(netD_A, os.path.join(cfg.WEIGHTS_PATH, 'last_netD_A.pt'))
-        torch.save(netD_B, os.path.join(cfg.WEIGHTS_PATH, 'last_netD_B.pt'))
-        torch.save(netG_A2B, os.path.join(cfg.WEIGHTS_PATH, 'last_netG_A2B.pt'))
-        torch.save(netG_B2A, os.path.join(cfg.WEIGHTS_PATH, 'last_netG_B2A.pt'))
+        save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last')
 
-        if running_val_loss[0] < gen_min_loss and running_val_loss[1] < dis_min_loss:
-            gen_min_loss = running_val_loss[0]
-            dis_min_loss = running_val_loss[1]
+        if (running_val_loss[0]+running_val_loss[1])/2 < min_loss and abs(running_val_loss[0]-running_val_loss[1]) < 0.15:
+            min_loss = (running_val_loss[0]+running_val_loss[1])/2
 
-            torch.save(netD_A, os.path.join(cfg.WEIGHTS_PATH, 'best_netD_A.pt'))
-            torch.save(netD_B, os.path.join(cfg.WEIGHTS_PATH, 'best_netD_B.pt'))
-            torch.save(netG_A2B, os.path.join(cfg.WEIGHTS_PATH, 'best_netG_A2B.pt'))
-            torch.save(netG_B2A, os.path.join(cfg.WEIGHTS_PATH, 'best_netG_B2A.pt'))
+            save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='best')
             print('Best weights saved!')
         print()
 

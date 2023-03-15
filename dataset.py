@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 class MyDataset(Dataset):
     def __init__(self, data_path, transforms):
         super().__init__()
-        self.transform = T.Compose(transforms)
+        self.transform = transforms
         self.files_A = glob.glob(data_path+'A/*.*')
         self.files_B = glob.glob(data_path+'B/*.*')
     

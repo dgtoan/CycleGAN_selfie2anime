@@ -1,9 +1,28 @@
+import os
+import glob
 import torch
 import config as cfg
-from dataset import MyDataset
-from torch.utils.data import DataLoader
+from model import Generator
+from tqdm import tqdm
+import torchvision.transforms as T
+from utils import pred_img
 
-testDataset = MyDataset(cfg.TEST_PATH, cfg.TEST_TRANS)
-testLoader = DataLoader(testDataset, cfg.BATCH_SIZE, num_workers=cfg.N_WORKER)
+os.makedirs(cfg.RESULT_PATH, exist_ok=True)
+image_files = glob.glob(cfg.TEST_PATH+'/*.*')
+model = Generator().to(cfg.DEVICE)
+transform = T.Compose(cfg.TEST_TRANS)
 
+if cfg.MODE == 'A2B':
+    model.load_state_dict(torch.load(cfg.G_A2B_PATH))
+    print("From anime to selfie image")
+elif cfg.MODE == 'B2A':
+    model.load_state_dict(torch.load(cfg.G_B2A_PATH))
+    print("From selfie image to anime")
+else:
+    print("ERROR: Predict mode does not exist!")
+    exit()
 
+with torch.no_grad():
+    model.eval()
+    for img_path in tqdm(image_files):
+        pred_img(img_path, model, save_img=True)

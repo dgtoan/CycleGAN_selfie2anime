@@ -2,36 +2,40 @@ import torch
 import torchvision.transforms as T
 
 IMG_SIZE = 128
-DEVIVE = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-# data config
-DATA_PATH = './dataset/'
+# Data config
+DATA_PATH = 'dataset/'
 TRAIN_PATH = DATA_PATH + 'train/'
 VAL_PATH = DATA_PATH + 'val/'
-TRAIN_TRANS = [
+TRAIN_TRANS = T.Compose([
     T.Resize(IMG_SIZE),
     T.RandomHorizontalFlip(),
     T.ToTensor(),
     T.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
-]
-TEST_TRANS = [
+])
+TEST_TRANS = T.Compose([
     T.Resize(IMG_SIZE),
     T.ToTensor(),
     T.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
-]
+])
 
-# train config
-BATCH_SIZE = 1
-N_WORKER = 0
-EPOCHS = 100
+# Train config
+BATCH_SIZE = 16
+N_WORKER = 2
+EPOCHS = 50
 LR = 0.0002
 
-# predict config
-TEST_PATH = ''
-G_A2B_PATH = ''
-G_B2A_PATH = ''
+# Predict config
+MODE = 'B2A'
+# A2B: anime -> selfie
+# B2A: selfie -> anime
+TEST_PATH = 'test/B/'
+RESULT_PATH = 'output/pred_imgs/'
+G_A2B_PATH = 'output/weights/best_netG_A2B.pt'
+G_B2A_PATH = 'output/weights/best_netG_B2A.pt'
 
-# loss lambda
+# Loss lambda
 LAMBDA_ = 10
 
 # Result
