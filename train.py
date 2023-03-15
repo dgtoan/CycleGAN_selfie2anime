@@ -18,8 +18,8 @@ def main():
     valDataset = MyDataset(VAL_PATH, TEST_TRANS)
     trainLoader = DataLoader(trainDataset, BATCH_SIZE, shuffle=True, num_workers=N_WORKER)
     valLoader = DataLoader(valDataset, BATCH_SIZE, num_workers=N_WORKER)
-    print("Train Images: ", len(trainLoader))
-    print("Validation Images: ", len(valLoader))
+    print("Train Images: ", trainDataset.__len__())
+    print("Validation Images: ", valDataset.__len__)
     print()
 
     netG_A2B = Generator().to(DEVICE)
@@ -117,8 +117,8 @@ def main():
             running_train_loss[0] += gen_tot_loss.item()*real_A.size(0)
             running_train_loss[1] += dis_tot_loss.item()*real_A.size(0)
 
-        running_train_loss[0] = round(running_train_loss[0]/len(trainLoader), 3)
-        running_train_loss[1] = round(running_train_loss[1]/len(trainLoader), 3)
+        running_train_loss[0] = round(running_train_loss[0]/trainDataset.__len__(), 3)
+        running_train_loss[1] = round(running_train_loss[1]/trainDataset.__len__(), 3)
         print('Generator Loss: {}, Discriminator Loss: {}'.format(*running_train_loss))
         losses_train.append(running_train_loss)
 
@@ -182,8 +182,8 @@ def main():
                 running_val_loss[0] += gen_tot_loss.item()*real_A.size(0)
                 running_val_loss[1] += dis_tot_loss.item()*real_A.size(0)
 
-            running_val_loss[0] = round(running_val_loss[0]/len(valLoader), 3)
-            running_val_loss[1] = round(running_val_loss[1]/len(valLoader), 3)
+            running_val_loss[0] = round(running_val_loss[0]/valDataset.__len__(), 3)
+            running_val_loss[1] = round(running_val_loss[1]/valDataset.__len__(), 3)
             print('Generator Loss: {}, Discriminator Loss: {}'.format(*running_val_loss))
             losses_val.append(running_val_loss)
 
