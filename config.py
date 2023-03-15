@@ -1,3 +1,4 @@
+import os
 import torch
 import torchvision.transforms as T
 
@@ -6,8 +7,8 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Data config
 DATA_PATH = 'dataset/'
-TRAIN_PATH = DATA_PATH + 'train/'
-VAL_PATH = DATA_PATH + 'val/'
+TRAIN_PATH = os.path.join(DATA_PATH, 'train/')
+VAL_PATH = os.path.join(DATA_PATH, 'val/')
 TRAIN_TRANS = T.Compose([
     T.Resize(IMG_SIZE),
     T.RandomHorizontalFlip(),
@@ -21,7 +22,7 @@ TEST_TRANS = T.Compose([
 ])
 
 # Train config
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 N_WORKER = 2
 EPOCHS = 50
 LR = 0.0002
