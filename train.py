@@ -12,6 +12,7 @@ from utils import (
 
 def main():
     os.makedirs(WEIGHTS_PATH, exist_ok=True)
+    print("Weights save in:", WEIGHTS_PATH)
     print("Device: ", DEVICE)
 
     trainDataset = MyDataset(TRAIN_PATH, TRAIN_TRANS)
@@ -19,7 +20,7 @@ def main():
     trainLoader = DataLoader(trainDataset, BATCH_SIZE, shuffle=True, num_workers=N_WORKER)
     valLoader = DataLoader(valDataset, BATCH_SIZE, num_workers=N_WORKER)
     print("Train Images: ", trainDataset.__len__())
-    print("Validation Images: ", valDataset.__len__)
+    print("Validation Images: ", valDataset.__len__())
     print()
 
     netG_A2B = Generator().to(DEVICE)
@@ -190,7 +191,7 @@ def main():
         # Save model
         save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last')
 
-        if (running_val_loss[0]+running_val_loss[1])/2 < min_loss and abs(running_val_loss[0]-running_val_loss[1]) < 0.15:
+        if (running_val_loss[0]+running_val_loss[1])/2 < min_loss and abs(running_val_loss[0]-running_val_loss[1]) < 0.05:
             min_loss = (running_val_loss[0]+running_val_loss[1])/2
 
             save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='best')

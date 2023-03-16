@@ -2,8 +2,10 @@ import os
 import torch
 import config as cfg
 from PIL import Image
-from torchvision.utils import make_grid
-from torchvision.utils import save_image
+from torchvision.utils import (
+    make_grid,
+    save_image
+)
 
 def save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last'):
     torch.save(netD_A.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netD_A.pt'))
@@ -25,5 +27,3 @@ def pred_img(img_path, model, transform=cfg.TEST_TRANS, save_img=False):
         save_image(pred_img, pred_img_path)
 
     return pred_img
-
-    

@@ -2,7 +2,7 @@ import os
 import torch
 import torchvision.transforms as T
 
-IMG_SIZE = 128
+IMG_SIZE = 256
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Data config
@@ -24,7 +24,7 @@ TEST_TRANS = T.Compose([
 # Train config
 BATCH_SIZE = 8
 N_WORKER = 2
-EPOCHS = 50
+EPOCHS = 100
 LR = 0.0002
 
 # Predict config
@@ -36,8 +36,8 @@ RESULT_PATH = 'output/pred_imgs/'
 G_A2B_PATH = 'output/weights/best_netG_A2B.pt'
 G_B2A_PATH = 'output/weights/best_netG_B2A.pt'
 
-# Loss lambda
-LAMBDA_ = 10
+# Cycle loss lambda
+LAMBDA_ = 5
 
 # Result
 WEIGHTS_PATH = 'output/weights/'
