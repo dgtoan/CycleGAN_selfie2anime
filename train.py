@@ -19,10 +19,8 @@ def main():
     valDataset = MyDataset(VAL_PATH, TEST_TRANS)
     trainLoader = DataLoader(trainDataset, BATCH_SIZE, shuffle=True, num_workers=N_WORKER)
     valLoader = DataLoader(valDataset, BATCH_SIZE, num_workers=N_WORKER)
-    trainData_len = trainDataset.__len__()
-    valData_len = valDataset.__len__()
-    print("Train Images: ", trainData_len)
-    print("Validation Images: ", valData_len)
+    print("Train Images: ", trainDataset.__len__())
+    print("Validation Images: ", valDataset.__len__())
     print()
 
     netG_A2B = Generator().to(DEVICE)
@@ -42,8 +40,8 @@ def main():
 
     for epoch in range(EPOCHS):
         print('EPOCH', epoch)
-        running_train_loss = [0.0]*4
-        running_val_loss = [0.0]*4
+        running_train_loss = [0.0, 0.0]
+        running_val_loss = [0.0, 0.0]
 
         # TRAINING
         print('Training:')
@@ -52,7 +50,12 @@ def main():
         netG_A2B.train()
         netG_B2A.train()
 
-        for input in tqdm(trainLoader, ncols=80):
+        pbar = tqdm(
+            trainLoader,
+            postfix = {'G_Loss': 0.0, 'D_Loss': 0.0},
+            ncols=100
+        )
+        for input in pbar:
 
             real_A = input['A'].to(DEVICE)
             real_B = input['B'].to(DEVICE)
@@ -103,18 +106,21 @@ def main():
             dis_B_loss.backward()
             optimizer_D_B.step()
 
-            # Log training loss
-            running_train_loss[0] += genA2B_loss.item()
-            running_train_loss[1] += dis_B_loss.item()
-            running_train_loss[2] += genB2A_loss.item()
-            running_train_loss[3] += dis_A_loss.item()
-            running_train_loss *= real_A.size(0)
+            # update progress bar
+            dis_tot_loss = (dis_A_loss+dis_B_loss) / 2
+            gen_tot_loss = gen_tot_loss / LAMBDA_ / 3.2
+            pbar.set_postfix({
+                'G_Loss': round(gen_tot_loss.item(), 3),
+                'D_Loss': round(dis_tot_loss.item(), 3),
+            })
 
-        running_train_loss[0] = round(running_train_loss[0]/trainData_len, 3)
-        running_train_loss[1] = round(running_train_loss[1]/trainData_len, 3)
-        running_train_loss[2] = round(running_train_loss[2]/trainData_len, 3)
-        running_train_loss[3] = round(running_train_loss[3]/trainData_len, 3)
-        print('GenA2B Loss: {}, DisB Loss: {}\nGenB2A Loss: {}, DisA Loss: {}'.format(*running_train_loss))
+            # Log training loss
+            running_train_loss[0] += gen_tot_loss.item()*real_A.size(0)
+            running_train_loss[1] += dis_tot_loss.item()*real_A.size(0)
+
+        running_train_loss[0] = round(running_train_loss[0]/trainDataset.__len__(), 3)
+        running_train_loss[1] = round(running_train_loss[1]/trainDataset.__len__(), 3)
+        print('Generator Loss: {}, Discriminator Loss: {}'.format(*running_train_loss))
         losses_train.append(running_train_loss)
 
         # VALIDATING
@@ -125,8 +131,14 @@ def main():
         netG_A2B.eval()
         netG_B2A.eval()
 
+        pbar = tqdm(
+            valLoader,
+            postfix = {'G_Loss': 0.0, 'D_Loss': 0.0},
+            ncols=100
+        )
+
         with torch.no_grad():
-            for input in tqdm(valLoader, ncols=80):
+            for input in pbar:
                 real_A = input['A'].to(DEVICE)
                 real_B = input['B'].to(DEVICE)
 
@@ -159,19 +171,22 @@ def main():
                 pred_fake_B = netD_B(fake_B.detach())
                 dis_B_loss = loss.get_dis_loss(pred_fake_B, pred_real_B)
 
-                # Log training loss
-                running_val_loss[0] += genA2B_loss.item()
-                running_val_loss[1] += dis_B_loss.item()
-                running_val_loss[2] += genB2A_loss.item()
-                running_val_loss[3] += dis_A_loss.item()
-                running_val_loss *= real_A.size(0)
+                # Update progress bar
+                dis_tot_loss = (dis_A_loss+dis_B_loss) / 2
+                gen_tot_loss = gen_tot_loss / LAMBDA_ / 3.2
+                pbar.set_postfix({
+                    'G_Loss': round(gen_tot_loss.item(), 3),
+                    'D_Loss': round(dis_tot_loss.item(), 3),
+                })
 
-            running_val_loss[0] = round(running_val_loss[0]/valData_len, 3)
-            running_val_loss[1] = round(running_val_loss[1]/valData_len, 3)
-            running_val_loss[2] = round(running_val_loss[2]/valData_len, 3)
-            running_val_loss[3] = round(running_val_loss[3]/valData_len, 3)
-            print('GenA2B Loss: {}, DisB Loss: {}\nGenB2A Loss: {}, DisA Loss: {}'.format(*running_val_loss))
-            losses_train.append(running_val_loss)
+                # Log training loss
+                running_val_loss[0] += gen_tot_loss.item()*real_A.size(0)
+                running_val_loss[1] += dis_tot_loss.item()*real_A.size(0)
+
+            running_val_loss[0] = round(running_val_loss[0]/valDataset.__len__(), 3)
+            running_val_loss[1] = round(running_val_loss[1]/valDataset.__len__(), 3)
+            print('Generator Loss: {}, Discriminator Loss: {}'.format(*running_val_loss))
+            losses_val.append(running_val_loss)
 
         # Save model
         save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last')
