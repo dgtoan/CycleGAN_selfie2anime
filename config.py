@@ -25,7 +25,8 @@ TEST_TRANS = T.Compose([
 BATCH_SIZE = 8
 N_WORKER = 2
 EPOCHS = 100
-LR = 0.0002
+GEN_LR = 0.0002
+DIS_LR = 0.0001
 
 # Predict config
 MODE = 'B2A'

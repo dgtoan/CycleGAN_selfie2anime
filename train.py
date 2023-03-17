@@ -31,9 +31,9 @@ def main():
     netD_B = Discriminator().to(DEVICE)
 
     G_params = list(netG_A2B.parameters()) + list(netG_B2A.parameters())
-    optimizer_G = torch.optim.Adam(G_params, lr=LR, betas=(0.5, 0.999))
-    optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=LR, betas=(0.5, 0.999))
-    optimizer_D_B = torch.optim.Adam(netD_B.parameters(), lr=LR, betas=(0.5, 0.999))
+    optimizer_G = torch.optim.Adam(G_params, lr=GEN_LR, betas=(0.5, 0.999))
+    optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=DIS_LR, betas=(0.5, 0.999))
+    optimizer_D_B = torch.optim.Adam(netD_B.parameters(), lr=DIS_LR, betas=(0.5, 0.999))
 
     loss = Loss(LAMBDA_)
     losses_train = []
