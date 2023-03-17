@@ -7,11 +7,15 @@ from torchvision.utils import (
     save_image
 )
 
-def save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last'):
-    torch.save(netD_A.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netD_A.pt'))
-    torch.save(netD_B.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netD_B.pt'))
-    torch.save(netG_A2B.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netG_A2B.pt'))
-    torch.save(netG_B2A.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netG_B2A.pt'))
+def save_weights(netD_A = None, netD_B = None, netG_A2B = None, netG_B2A = None, type_='last'):
+    if netD_A != None:
+        torch.save(netD_A.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netD_A.pt'))
+    if netD_B != None:
+        torch.save(netD_B.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netD_B.pt'))
+    if netG_A2B != None:
+        torch.save(netG_A2B.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netG_A2B.pt'))
+    if netG_B2A != None:
+        torch.save(netG_B2A.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netG_B2A.pt'))
 
 def pred_img(img_path, model, transform=cfg.TEST_TRANS, save_img=False):
     img = Image.open(img_path).convert('RGB')

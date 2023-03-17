@@ -37,8 +37,8 @@ def main():
 
     loss = Loss(LAMBDA_)
     losses_train = []
-    losses_val = []
-    min_loss = 1.0
+    min_loss_A2B = 1
+    min_loss_B2A = 1
 
     for epoch in range(EPOCHS):
         print('EPOCH', epoch)
@@ -52,7 +52,7 @@ def main():
         netG_A2B.train()
         netG_B2A.train()
 
-        for input in tqdm(trainLoader, ncols=80):
+        for input in tqdm(trainLoader, ncols=60):
 
             real_A = input['A'].to(DEVICE)
             real_B = input['B'].to(DEVICE)
@@ -125,7 +125,7 @@ def main():
         netG_B2A.eval()
 
         with torch.no_grad():
-            for input in tqdm(valLoader, ncols=80):
+            for input in tqdm(valLoader, ncols=60):
                 real_A = input['A'].to(DEVICE)
                 real_B = input['B'].to(DEVICE)
 
@@ -174,11 +174,17 @@ def main():
         # Save model
         save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last')
 
-        if (running_val_loss[0]+running_val_loss[1])/2 < min_loss and abs(running_val_loss[0]-running_val_loss[1]) < 0.05:
-            min_loss = (running_val_loss[0]+running_val_loss[1])/2
+        if (running_val_loss[0]+running_val_loss[1])/2 + abs(running_val_loss[0]-running_val_loss[1])*2 < min_loss_A2B:
+            min_loss_A2B = (running_val_loss[0]+running_val_loss[1])/2 + abs(running_val_loss[0]-running_val_loss[1])*2
 
-            save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='best')
-            print('Best weights saved!')
+            save_weights(netG_A2B=netG_A2B, netD_B=netD_B, type_='best')
+            print('Best weights A2B saved!')
+
+        if (running_val_loss[2]+running_val_loss[3])/2 + abs(running_val_loss[2]-running_val_loss[3])*2 < min_loss_A2B:
+            min_loss_A2B = (running_val_loss[2]+running_val_loss[3])/2 + abs(running_val_loss[2]-running_val_loss[3])*2
+
+            save_weights(netG_B2A=netG_B2A, netD_A=netD_A, type_='best')
+            print('Best weights B2A saved!')
         print()
 
 if __name__=='__main__':
