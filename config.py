@@ -2,7 +2,7 @@ import os
 import torch
 import torchvision.transforms as T
 
-IMG_SIZE = 256
+IMG_SIZE = 128
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Data config
