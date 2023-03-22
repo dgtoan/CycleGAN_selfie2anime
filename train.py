@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 from config import *
 from dataset import MyDataset
@@ -42,8 +43,8 @@ def main():
 
     for epoch in range(EPOCHS):
         print('EPOCH', epoch)
-        running_train_loss = [0.0]*4
-        running_val_loss = [0.0]*4
+        running_train_loss = np.zeros(5)
+        running_val_loss = np.zeros(5)
 
         # TRAINING
         print('Training:')
@@ -104,16 +105,19 @@ def main():
             optimizer_D_B.step()
 
             # Log training loss
-            running_train_loss[0] += genA2B_loss.item()*real_A.size(0)
-            running_train_loss[1] += dis_B_loss.item()*real_A.size(0)
-            running_train_loss[2] += genB2A_loss.item()*real_A.size(0)
-            running_train_loss[3] += dis_A_loss.item()*real_A.size(0)
+            temp_all_loss = np.array([
+                genA2B_loss.item(),
+                dis_B_loss.item(),
+                genB2A_loss.item(),
+                dis_A_loss.item(),
+                gen_tot_loss.item()
+            ])
+            running_train_loss += temp_all_loss * real_A.size(0)
 
-        running_train_loss[0] = round(running_train_loss[0]/trainData_len, 3)
-        running_train_loss[1] = round(running_train_loss[1]/trainData_len, 3)
-        running_train_loss[2] = round(running_train_loss[2]/trainData_len, 3)
-        running_train_loss[3] = round(running_train_loss[3]/trainData_len, 3)
-        print('GenA2B Loss: {}, DisB Loss: {}\nGenB2A Loss: {}, DisA Loss: {}'.format(*running_train_loss))
+        running_train_loss = np.around(running_train_loss/trainData_len, 3)
+        print( 'GenA2B Loss: {}, DisB Loss: {}\
+                \nGenB2A Loss: {}, DisA Loss: {}\
+                \nGen total Loss: {}'.format(*running_train_loss))
         losses_train.append(running_train_loss)
 
         # VALIDATING
@@ -159,28 +163,32 @@ def main():
                 dis_B_loss = loss.get_dis_loss(pred_fake_B, pred_real_B)
 
                 # Log training loss
-                running_val_loss[0] += genA2B_loss.item()*real_A.size(0)
-                running_val_loss[1] += dis_B_loss.item()*real_A.size(0)
-                running_val_loss[2] += genB2A_loss.item()*real_A.size(0)
-                running_val_loss[3] += dis_A_loss.item()*real_A.size(0)
+                temp_all_loss = np.array([
+                    genA2B_loss.item(),
+                    dis_B_loss.item(),
+                    genB2A_loss.item(),
+                    dis_A_loss.item(),
+                    gen_tot_loss.item()
+                ])
+                running_val_loss += temp_all_loss * real_A.size(0)
 
-            running_val_loss[0] = round(running_val_loss[0]/valData_len, 3)
-            running_val_loss[1] = round(running_val_loss[1]/valData_len, 3)
-            running_val_loss[2] = round(running_val_loss[2]/valData_len, 3)
-            running_val_loss[3] = round(running_val_loss[3]/valData_len, 3)
-            print('GenA2B Loss: {}, DisB Loss: {}\nGenB2A Loss: {}, DisA Loss: {}'.format(*running_val_loss))
+
+            running_val_loss = np.around(running_val_loss/valData_len, 3)
+            print( 'GenA2B Loss: {}, DisB Loss: {}\
+                    \nGenB2A Loss: {}, DisA Loss: {}\
+                    \nGen total Loss: {}'.format(*running_val_loss))
             losses_train.append(running_val_loss)
 
         # Save model
         save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last')
 
-        if (running_val_loss[0]+running_val_loss[1])/2 + abs(running_val_loss[0]-running_val_loss[1])*2 < min_loss_A2B and epoch >= 50:
+        if (running_val_loss[0]+running_val_loss[1])/2 + abs(running_val_loss[0]-running_val_loss[1])*2 < min_loss_A2B+0.1 and epoch >= EPOCHS*2//3:
             min_loss_A2B = (running_val_loss[0]+running_val_loss[1])/2 + abs(running_val_loss[0]-running_val_loss[1])*2
 
             save_weights(netG_A2B=netG_A2B, netD_B=netD_B, type_='best')
             print('Best weights A2B saved!')
 
-        if (running_val_loss[2]+running_val_loss[3])/2 + abs(running_val_loss[2]-running_val_loss[3])*2 < min_loss_B2A and epoch >= 50:
+        if (running_val_loss[2]+running_val_loss[3])/2 + abs(running_val_loss[2]-running_val_loss[3])*2 < min_loss_B2A+0.1 and epoch >= EPOCHS*2//3:
             min_loss_B2A = (running_val_loss[2]+running_val_loss[3])/2 + abs(running_val_loss[2]-running_val_loss[3])*2
 
             save_weights(netG_B2A=netG_B2A, netD_A=netD_A, type_='best')

@@ -38,7 +38,7 @@ G_A2B_PATH = 'output/weights/best_netG_A2B.pt'
 G_B2A_PATH = 'output/weights/best_netG_B2A.pt'
 
 # Cycle loss lambda
-LAMBDA_ = 5
+LAMBDA_ = 10
 
 # Result
 WEIGHTS_PATH = 'output/weights/'
