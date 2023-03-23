@@ -1,4 +1,5 @@
 dataset/
+dataset.zip
 __pycache__/
 output/
 test.py
