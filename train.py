@@ -2,29 +2,39 @@ import os
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from config import *
 from dataset import MyDataset
 from model import Generator, Discriminator
 from loss import Loss
 from tqdm import tqdm
 from utils import (
-    save_weights,
+    make_grid_images,
+    make_folders,
+    lr_lambda,
 )
 
+
 def main():
-    os.makedirs(WEIGHTS_PATH, exist_ok=True)
-    print("Weights save in:", WEIGHTS_PATH)
     print("Device: ", DEVICE)
 
-    trainDataset = MyDataset(TRAIN_PATH, TRAIN_TRANS)
-    valDataset = MyDataset(VAL_PATH, TEST_TRANS)
+    trainDataset = MyDataset(os.path.join(DATA_PATH, 'train/'), TRAIN_TRANS)
+    valDataset = MyDataset(os.path.join(DATA_PATH, 'val/'), TEST_TRANS)
     trainLoader = DataLoader(trainDataset, BATCH_SIZE, shuffle=True, num_workers=N_WORKER)
-    valLoader = DataLoader(valDataset, BATCH_SIZE, num_workers=N_WORKER)
+    valLoader = DataLoader(valDataset, BATCH_SIZE, shuffle=True, num_workers=N_WORKER)
     trainData_len = trainDataset.__len__()
     valData_len = valDataset.__len__()
     print("Train Images: ", trainData_len)
     print("Validation Images: ", valData_len)
+    
+    run_dir = 'output/run/'
+    weight_save_path = os.path.join(run_dir, 'weights')
+    tensorboard_path = os.path.join(run_dir, 'tensorboard')
+    make_folders(run_dir, weight_save_path, tensorboard_path)
+    print('Output save in', run_dir)
     print()
+    
+    writer = SummaryWriter(tensorboard_path)
 
     netG_A2B = Generator().to(DEVICE)
     netG_B2A = Generator().to(DEVICE)
@@ -35,14 +45,15 @@ def main():
     optimizer_G = torch.optim.Adam(G_params, lr=GEN_LR, betas=(0.5, 0.999))
     optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=DIS_LR, betas=(0.5, 0.999))
     optimizer_D_B = torch.optim.Adam(netD_B.parameters(), lr=DIS_LR, betas=(0.5, 0.999))
-
+    
+    lr_scheduler_G = torch.optim.lr_scheduler.LambdaLR(optimizer_G, lr_lambda)
+    lr_scheduler_D_A = torch.optim.lr_scheduler.LambdaLR(optimizer_D_A, lr_lambda)
+    lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(optimizer_D_B, lr_lambda)
     loss = Loss(LAMBDA_)
-    losses_train = []
-    min_loss_A2B = 1
-    min_loss_B2A = 1
 
     for epoch in range(EPOCHS):
         print('EPOCH', epoch)
+        show_imgs = True
         running_train_loss = np.zeros(5)
         running_val_loss = np.zeros(5)
 
@@ -104,21 +115,19 @@ def main():
             dis_B_loss.backward()
             optimizer_D_B.step()
 
-            # Log training loss
             temp_all_loss = np.array([
-                genA2B_loss.item(),
-                dis_B_loss.item(),
-                genB2A_loss.item(),
-                dis_A_loss.item(),
-                gen_tot_loss.item()
+                gen_tot_loss.item(),
+                (dis_A_loss+dis_B_loss).item(),
+                (genA2B_loss+genB2A_loss).item(),
+                (ident_A_loss+ident_B_loss).item(),
+                (cyc_A_loss+cyc_B_loss).item()
             ])
             running_train_loss += temp_all_loss * real_A.size(0)
 
-        running_train_loss = np.around(running_train_loss/trainData_len, 3)
-        print( 'GenA2B Loss: {}, DisB Loss: {}\
-                \nGenB2A Loss: {}, DisA Loss: {}\
-                \nGen total Loss: {}'.format(*running_train_loss))
-        losses_train.append(running_train_loss)
+        running_train_loss = np.around(running_train_loss/trainData_len, 4)
+        print( 'Gen Total Loss: {}\
+                \nDis Total Loss: {}\
+                \nGen Loss: {}, Identity Loss: {} Cycle Loss: {}'.format(*running_train_loss))
 
         # VALIDATING
         print('Validating:')
@@ -162,38 +171,64 @@ def main():
                 pred_fake_B = netD_B(fake_B.detach())
                 dis_B_loss = loss.get_dis_loss(pred_fake_B, pred_real_B)
 
-                # Log training loss
                 temp_all_loss = np.array([
-                    genA2B_loss.item(),
-                    dis_B_loss.item(),
-                    genB2A_loss.item(),
-                    dis_A_loss.item(),
-                    gen_tot_loss.item()
+                    gen_tot_loss.item(),
+                    (dis_A_loss+dis_B_loss).item(),
+                    (genA2B_loss+genB2A_loss).item(),
+                    (ident_A_loss+ident_B_loss).item(),
+                    (cyc_A_loss+cyc_B_loss).item()
                 ])
                 running_val_loss += temp_all_loss * real_A.size(0)
+        
+        running_val_loss = np.around(running_val_loss/valData_len, 4)
+        print( 'Gen Total Loss: {}\
+                \nDis Total Loss: {}\
+                \nGen Loss: {}, Identity Loss: {} Cycle Loss: {}\n'.format(*running_val_loss))
+        
+        if show_imgs:
+            grid_imgs = make_grid_images(real_A[:2], real_B[:2], fake_B[:2], fake_A[:2])
+            writer.add_image('images', grid_imgs, epoch)
+            show_imgs = False
 
-
-            running_val_loss = np.around(running_val_loss/valData_len, 3)
-            print( 'GenA2B Loss: {}, DisB Loss: {}\
-                    \nGenB2A Loss: {}, DisA Loss: {}\
-                    \nGen total Loss: {}'.format(*running_val_loss))
-            losses_train.append(running_val_loss)
+        writer.add_scalars(
+            "Total Loss/Generator",
+            {"Training": running_train_loss[0], "Validating": running_val_loss[0]},
+            epoch
+        )
+        writer.add_scalars(
+            "Total Loss/Discriminator",
+            {"Training": running_train_loss[1], "Validating": running_val_loss[1]},
+            epoch
+        )
+        writer.add_scalars(
+            "Detail Gen Loss/Gen",
+            {"Training": running_train_loss[2], "Validating": running_val_loss[2]},
+            epoch
+        )
+        writer.add_scalars(
+            "Detail Gen Loss/Identity",
+            {"Training": running_train_loss[3], "Validating": running_val_loss[3]},
+            epoch
+        )
+        writer.add_scalars(
+            "Detail Gen Loss/Cycle",
+            {"Training": running_train_loss[4], "Validating": running_val_loss[4]},
+            epoch
+        )
+        writer.flush()
+        
+        # Update learning rates
+        lr_scheduler_G.step()
+        lr_scheduler_D_A.step()
+        lr_scheduler_D_B.step()
 
         # Save model
-        save_weights(netD_A, netD_B, netG_A2B, netG_B2A, type_='last')
-
-        if (running_val_loss[0]+running_val_loss[1])/2 + abs(running_val_loss[0]-running_val_loss[1])*2 < min_loss_A2B+0.1 and epoch >= EPOCHS*2//3:
-            min_loss_A2B = (running_val_loss[0]+running_val_loss[1])/2 + abs(running_val_loss[0]-running_val_loss[1])*2
-
-            save_weights(netG_A2B=netG_A2B, netD_B=netD_B, type_='best')
-            print('Best weights A2B saved!')
-
-        if (running_val_loss[2]+running_val_loss[3])/2 + abs(running_val_loss[2]-running_val_loss[3])*2 < min_loss_B2A+0.1 and epoch >= EPOCHS*2//3:
-            min_loss_B2A = (running_val_loss[2]+running_val_loss[3])/2 + abs(running_val_loss[2]-running_val_loss[3])*2
-
-            save_weights(netG_B2A=netG_B2A, netD_A=netD_A, type_='best')
-            print('Best weights B2A saved!')
-        print()
+        torch.save(netD_A.state_dict(), os.path.join(weight_save_path, 'netD_A.pt'))
+        torch.save(netD_B.state_dict(), os.path.join(weight_save_path, 'netD_B.pt'))
+        torch.save(netG_A2B.state_dict(), os.path.join(weight_save_path, 'netG_A2B.pt'))
+        torch.save(netG_B2A.state_dict(), os.path.join(weight_save_path, 'netG_B2A.pt'))
+     
+    writer.close()
 
 if __name__=='__main__':
     main()

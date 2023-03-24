@@ -10,8 +10,8 @@ class MyDataset(Dataset):
     def __init__(self, data_path, transforms):
         super().__init__()
         self.transform = transforms
-        self.files_A = glob.glob(data_path+'A/*.*')
-        self.files_B = glob.glob(data_path+'B/*.*')
+        self.files_A = glob.glob(data_path+'/A/*.*')
+        self.files_B = glob.glob(data_path+'/B/*.*')
     
     def __len__(self):
         return min(len(self.files_A), len(self.files_B))

@@ -8,7 +8,7 @@ import torchvision.transforms as T
 from utils import pred_img
 
 os.makedirs(cfg.RESULT_PATH, exist_ok=True)
-image_files = glob.glob(cfg.TEST_PATH+'/*.*')
+image_files = glob.glob(cfg.DATA_TEST_PATH+'/*.*')
 model = Generator().to(cfg.DEVICE)
 transform = T.Compose(cfg.TEST_TRANS)
 

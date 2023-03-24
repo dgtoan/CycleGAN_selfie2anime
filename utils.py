@@ -1,4 +1,5 @@
 import os
+import shutil
 import torch
 import config as cfg
 from PIL import Image
@@ -6,16 +7,6 @@ from torchvision.utils import (
     make_grid,
     save_image
 )
-
-def save_weights(netD_A = None, netD_B = None, netG_A2B = None, netG_B2A = None, type_='last'):
-    if netD_A != None:
-        torch.save(netD_A.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netD_A.pt'))
-    if netD_B != None:
-        torch.save(netD_B.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netD_B.pt'))
-    if netG_A2B != None:
-        torch.save(netG_A2B.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netG_A2B.pt'))
-    if netG_B2A != None:
-        torch.save(netG_B2A.state_dict(), os.path.join(cfg.WEIGHTS_PATH, type_+'_netG_B2A.pt'))
 
 def pred_img(img_path, model, transform=cfg.TEST_TRANS, save_img=False):
     img = Image.open(img_path).convert('RGB')
@@ -31,3 +22,24 @@ def pred_img(img_path, model, transform=cfg.TEST_TRANS, save_img=False):
         save_image(pred_img, pred_img_path)
 
     return pred_img
+
+def make_grid_images(*imgs):
+    imgs = torch.cat((imgs))
+    imgs = make_grid(imgs, normalize=True, nrow=4)
+    return imgs
+
+def make_folders(root_dir='output/run', *paths):
+    if os.path.exists(root_dir):
+        shutil.rmtree(root_dir)
+    os.makedirs(root_dir, exist_ok=True)
+    
+    for path in paths:
+        os.makedirs(path, exist_ok=True)
+
+def lr_lambda(epoch):
+    assert cfg.EPOCH_DECAY < cfg.EPOCHS
+    fraction = (epoch - cfg.EPOCH_DECAY) / (cfg.EPOCHS - cfg.EPOCH_DECAY)
+    return 1.0 - max(0, fraction)
+
+if __name__=='__main__':
+    pass

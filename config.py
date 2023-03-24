@@ -7,38 +7,32 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Data config
 DATA_PATH = 'dataset/'
-TRAIN_PATH = os.path.join(DATA_PATH, 'train/')
-VAL_PATH = os.path.join(DATA_PATH, 'val/')
 TRAIN_TRANS = T.Compose([
-    T.Resize(IMG_SIZE),
+    T.Resize((IMG_SIZE, IMG_SIZE)),
     T.RandomHorizontalFlip(),
     T.ToTensor(),
     T.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
 ])
 TEST_TRANS = T.Compose([
-    T.Resize(IMG_SIZE),
+    T.Resize((IMG_SIZE, IMG_SIZE)),
     T.ToTensor(),
     T.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
 ])
 
 # Train config
 BATCH_SIZE = 8
-N_WORKER = 2
-EPOCHS = 100
+N_WORKER = 4
+EPOCHS = 400
+EPOCH_DECAY = 300
 GEN_LR = 0.0002
-DIS_LR = 0.0001
+DIS_LR = 0.0002
 
 # Predict config
 MODE = 'B2A'
-# A2B: anime -> selfie
-# B2A: selfie -> anime
-TEST_PATH = 'test/B/'
-RESULT_PATH = 'output/pred_imgs/'
-G_A2B_PATH = 'output/weights/best_netG_A2B.pt'
-G_B2A_PATH = 'output/weights/best_netG_B2A.pt'
+    # A2B: anime -> selfie
+    # B2A: selfie -> anime
+DATA_TEST_PATH = 'test/B/'
+WEIGHT_PATH = 'output/run/weights/best_netG_A2B.pt'
 
 # Cycle loss lambda
 LAMBDA_ = 10
-
-# Result
-WEIGHTS_PATH = 'output/weights/'
