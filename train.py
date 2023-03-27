@@ -1,4 +1,5 @@
 import os
+import itertools
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
@@ -12,6 +13,8 @@ from utils import (
     make_grid_images,
     make_folders,
     lr_lambda,
+    ImageBuffer,
+    weights_init_normal,
 )
 
 
@@ -40,8 +43,14 @@ def main():
     netG_B2A = Generator().to(DEVICE)
     netD_A = Discriminator().to(DEVICE)
     netD_B = Discriminator().to(DEVICE)
+    
+    netG_A2B.apply(weights_init_normal)
+    netG_B2A.apply(weights_init_normal)
+    netD_A.apply(weights_init_normal)
+    netD_B.apply(weights_init_normal)
 
-    G_params = list(netG_A2B.parameters()) + list(netG_B2A.parameters())
+    # G_params = list(netG_A2B.parameters()) + list(netG_B2A.parameters())
+    G_params = itertools.chain(netG_A2B.parameters(), netG_B2A.parameters())
     optimizer_G = torch.optim.Adam(G_params, lr=GEN_LR, betas=(0.5, 0.999))
     optimizer_D_A = torch.optim.Adam(netD_A.parameters(), lr=DIS_LR, betas=(0.5, 0.999))
     optimizer_D_B = torch.optim.Adam(netD_B.parameters(), lr=DIS_LR, betas=(0.5, 0.999))
@@ -50,9 +59,12 @@ def main():
     lr_scheduler_D_A = torch.optim.lr_scheduler.LambdaLR(optimizer_D_A, lr_lambda)
     lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(optimizer_D_B, lr_lambda)
     loss = Loss(LAMBDA_)
+    
+    fake_A_buffer = ImageBuffer()
+    fake_B_buffer = ImageBuffer()
 
     for epoch in range(EPOCHS):
-        print('EPOCH', epoch)
+        print('EPOCH {}/{}'.format(epoch, EPOCHS))
         show_imgs = True
         running_train_loss = np.zeros(5)
         running_val_loss = np.zeros(5)
@@ -98,6 +110,7 @@ def main():
             # Discriminator A
             optimizer_D_A.zero_grad()
 
+            fake_A = fake_A_buffer.push_pop(fake_A)
             pred_real_A = netD_A(real_A)
             pred_fake_A = netD_A(fake_A.detach())
             dis_A_loss = loss.get_dis_loss(pred_fake_A, pred_real_A)
@@ -108,6 +121,7 @@ def main():
             # Discriminator B
             optimizer_D_B.zero_grad()
 
+            fake_B = fake_B_buffer.push_pop(fake_B)
             pred_real_B = netD_B(real_B)
             pred_fake_B = netD_B(fake_B.detach())
             dis_B_loss = loss.get_dis_loss(pred_fake_B, pred_real_B)
@@ -127,7 +141,7 @@ def main():
         running_train_loss = np.around(running_train_loss/trainData_len, 4)
         print( 'Gen Total Loss: {}\
                 \nDis Total Loss: {}\
-                \nGen Loss: {}, Identity Loss: {} Cycle Loss: {}'.format(*running_train_loss))
+                \nGen Loss: {}, Identity Loss: {}, Cycle Loss: {}'.format(*running_train_loss))
 
         # VALIDATING
         print('Validating:')
@@ -183,7 +197,7 @@ def main():
         running_val_loss = np.around(running_val_loss/valData_len, 4)
         print( 'Gen Total Loss: {}\
                 \nDis Total Loss: {}\
-                \nGen Loss: {}, Identity Loss: {} Cycle Loss: {}\n'.format(*running_val_loss))
+                \nGen Loss: {}, Identity Loss: {}, Cycle Loss: {}\n'.format(*running_val_loss))
         
         if show_imgs:
             grid_imgs = make_grid_images(real_A[:2], real_B[:2], fake_B[:2], fake_A[:2])

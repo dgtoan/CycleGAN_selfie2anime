@@ -21,14 +21,10 @@ class ResidualBlock(nn.Module):
         return x + self.conv_block(x)
 
 class Generator(nn.Module):
-    def __init__(self, input_nc=3, output_nc=3):
+    def __init__(self, input_nc=3, output_nc=3, n_residual_blocks=9):
         super(Generator, self).__init__()
 
-        if cfg.IMG_SIZE <= 128:
-            self.n_residual_blocks = 6
-        else: self.n_residual_blocks = 9
-
-        # Initial convolution block
+        # Initial convolution block       
         model = [   nn.ReflectionPad2d(3),
                     nn.Conv2d(input_nc, 64, 7),
                     nn.InstanceNorm2d(64),
@@ -45,7 +41,7 @@ class Generator(nn.Module):
             out_features = in_features*2
 
         # Residual blocks
-        for _ in range(self.n_residual_blocks):
+        for _ in range(n_residual_blocks):
             model += [ResidualBlock(in_features)]
 
         # Upsampling
