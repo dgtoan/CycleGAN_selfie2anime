@@ -2,6 +2,7 @@
 I implemented a simple CycleGAN to solve the problem of translating selfies into anime
 
 ## Requirements
+Install Pytorch form [pytorch.org](pytorch.org)
 ```
 git clone https://github.com/dgtoan/CycleGAN_selfie2anime.git
 pip install -r requirements.txt
@@ -26,10 +27,7 @@ Or you can build your own dataset by setting up the following directory structur
 ```
 python train.py
 ```
-This command will start a training session using the images of dataset directory.
 You are free to change hyperparameters and configurations in ```config.py```
-
-Both generators and discriminators weights will be saved under the *output/run/weights* directory.
 
 You can view the training progress and live output images by running ```tensorboard --logdir output/run/tensorboard``` in another terminal and opening [http://localhost:6006/](http://localhost:6006/) in your browser.
 
@@ -40,8 +38,6 @@ You can view the training progress and live output images by running ```tensorbo
 ```
 python test.py
 ```
-This command will take the images form *dataset/test/B/* directory, run them through the generators and save the output under the *output/test/B2A* directory (default mode: B2A).
-
 As with train, you are free to change test mode and configurations in ```config.py```
 
 Examples of the generated outputs : *coming soon ...*
