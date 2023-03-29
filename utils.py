@@ -36,7 +36,7 @@ class ImageBuffer():
         
         return torch.cat(buffer_return, 0)
 
-def pred_img(img_path, model, transform=cfg.TEST_TRANS, save_img=False):
+def pred_img(img_path, model, transform=cfg.TEST_TRANS, save_path=None):
     img = Image.open(img_path).convert('RGB')
     img = transform(img)
     img = img.unsqueeze(0) # CHW -> NCHW
@@ -45,8 +45,8 @@ def pred_img(img_path, model, transform=cfg.TEST_TRANS, save_img=False):
     pred_img = model(img)
     pred_img = make_grid(pred_img, normalize=True)
 
-    if save_img:
-        pred_img_path = cfg.RESULT_PATH + os.path.split(img_path)[-1]
+    if save_path != None:
+        pred_img_path = os.path.join(save_path, os.path.split(img_path)[-1])
         save_image(pred_img, pred_img_path)
 
     return pred_img
@@ -76,7 +76,6 @@ def weights_init_normal(model):
     elif classname.find('BatchNorm2d') != -1:
         torch.nn.init.normal(model.weight.data, 1.0, 0.02)
         torch.nn.init.constant(model.bias.data, 0.0)
-
 
 if __name__=='__main__':
     pass
