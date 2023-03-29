@@ -20,19 +20,19 @@ TEST_TRANS = T.Compose([
 ])
 
 # Train config
-BATCH_SIZE = 8
+BATCH_SIZE = 1
 N_WORKER = 4
 EPOCHS = 200
 EPOCH_DECAY = 100
 GEN_LR = 0.0002
-DIS_LR = 0.0002
+DIS_LR = 0.0001
 
-# Predict config
+# Test config
 MODE = 'B2A'
     # A2B: anime -> selfie
     # B2A: selfie -> anime
-DATA_TEST_PATH = 'test/B/'
-WEIGHT_PATH = 'output/run/weights/best_netG_A2B.pt'
+DATA_TEST_PATH = 'dataset/test/B/'
+WEIGHT_PATH = 'output/run/weights/netG_B2A.pt'
 
 # Cycle loss lambda
 LAMBDA_ = 10
