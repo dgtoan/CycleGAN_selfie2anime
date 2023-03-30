@@ -2,7 +2,7 @@
 I implemented a simple CycleGAN to solve the problem of translating selfies into anime
 
 ## Requirements
-Install Pytorch form [pytorch.org](pytorch.org)
+First, download Pytorch from [pytorch.org](https://pytorch.org/)
 ```
 git clone https://github.com/dgtoan/CycleGAN_selfie2anime.git
 pip install -r requirements.txt
