@@ -9,6 +9,7 @@ pip install -r requirements.txt
 ```
 
 ## Training
+<a href="https://www.kaggle.com/code/dngton/cyclegan-selfie2anime"><img src="https://kaggle.com/static/images/open-in-kaggle.svg" alt="Open In Kaggle"></a>
 ### 1. Setup the dataset
 You will need to download [this dataset](https://www.kaggle.com/datasets/dngton/selfie2anime).
 
